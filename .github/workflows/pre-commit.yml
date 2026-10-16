@@ -20,5 +20,7 @@ jobs:
         with:
           path: ~/.cache/pre-commit
           key: pre-commit-${{ steps.python.outputs.python-version }}-${{ hashFiles('.pre-commit-config.yaml') }}
+      # Used by the cppcheck hook (language: system) in most Hector repositories
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends cppcheck
       - run: pip install pre-commit
       - run: pre-commit run --all-files --show-diff-on-failure --color=always
