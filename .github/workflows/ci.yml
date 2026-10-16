@@ -1,0 +1,14 @@
+name: CI
+
+# Runs this repository's own workflows from the current branch,
+# so changes are tested before the v1 tag is moved.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  pre-commit:
+    uses: ./.github/workflows/pre-commit.yml
+  build-and-test:
+    uses: ./.github/workflows/build-and-test.yml

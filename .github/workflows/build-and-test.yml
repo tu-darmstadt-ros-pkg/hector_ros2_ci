@@ -1,0 +1,119 @@
+name: Build & Test
+
+on:
+  workflow_call:
+    inputs:
+      rosdistro:
+        description: ROS 2 distribution to build against.
+        type: string
+        default: jazzy
+      runner:
+        description: GitHub runner label (e.g. ubuntu-24.04-arm for arm64).
+        type: string
+        default: ubuntu-24.04
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build-and-test:
+    name: Build & Test (${{ inputs.rosdistro }})
+    runs-on: ${{ inputs.runner }}
+    container:
+      image: ros:${{ inputs.rosdistro }}-ros-base
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: src/${{ github.event.repository.name }}
+
+      - name: Add Hector apt and rosdep sources
+        run: |
+          . /etc/os-release
+          # Public signing key of deb.teamhector.de (same as hector workspace .install-files/hector.sources)
+          cat > /etc/apt/sources.list.d/hector.sources <<EOF
+          Types: deb
+          URIs: http://deb.teamhector.de/ubuntu
+          Suites: ${VERSION_CODENAME}
+          Components: main
+          Signed-By: -----BEGIN PGP PUBLIC KEY BLOCK-----
+           .
+           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
+           NwgOXBj+7GA/zmR3Ew/LUgbx+iG89A==
+           =TFJF
+           -----END PGP PUBLIC KEY BLOCK-----
+          EOF
+          mkdir -p /etc/ros/rosdep/sources.list.d
+          echo "yaml http://deb.teamhector.de/rosdep/hector.yaml" > /etc/ros/rosdep/sources.list.d/10-hector.list
+          apt-get update
+          rosdep update --rosdistro "${{ inputs.rosdistro }}"
+
+          # Environment for later steps: ROS underlay, Hector packages (/opt/hector) on top
+          cat > /etc/hector_ci_env.bash <<'EOF'
+          source "/opt/ros/${ROS_DISTRO}/setup.bash"
+          HECTOR_PREFIX="/opt/hector/${ROS_DISTRO}"
+          if [ -d "$HECTOR_PREFIX" ]; then
+            export AMENT_PREFIX_PATH="$HECTOR_PREFIX:$AMENT_PREFIX_PATH"
+            export CMAKE_PREFIX_PATH="$HECTOR_PREFIX${CMAKE_PREFIX_PATH:+:$CMAKE_PREFIX_PATH}"
+            export PATH="$HECTOR_PREFIX/bin:$PATH"
+            export LD_LIBRARY_PATH="$HECTOR_PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+            for d in "$HECTOR_PREFIX"/lib/python3*/site-packages; do
+              if [ -d "$d" ]; then export PYTHONPATH="$d${PYTHONPATH:+:$PYTHONPATH}"; fi
+            done
+          fi
+          EOF
+
+      - name: Install dependencies
+        run: rosdep install -y --from-paths src --ignore-src --rosdistro "${{ inputs.rosdistro }}"
+
+      - name: Build
+        run: |
+          source /etc/hector_ci_env.bash
+          colcon build --event-handlers console_direct+
+
+      - name: Test
+        run: |
+          source /etc/hector_ci_env.bash
+          source install/setup.bash
+          colcon test --event-handlers console_direct+
+          colcon test-result --verbose
