@@ -85,8 +85,15 @@ jobs:
           EOF
           mkdir -p /etc/ros/rosdep/sources.list.d
           echo "yaml http://deb.teamhector.de/rosdep/hector.yaml" > /etc/ros/rosdep/sources.list.d/10-hector.list
+          # Retry downloads so short outages of the build server don't fail CI
+          echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/80-retries
           apt-get update
-          rosdep update --rosdistro "${{ inputs.rosdistro }}"
+          for i in 1 2 3 4 5; do
+            rosdep update --rosdistro "${{ inputs.rosdistro }}" && break
+            if [ "$i" -eq 5 ]; then exit 1; fi
+            echo "rosdep update failed, retrying in 20s ($i/5)"
+            sleep 20
+          done
 
           # Environment for later steps: ROS underlay, Hector packages (/opt/hector) on top
           cat > /etc/hector_ci_env.bash <<'EOF'
