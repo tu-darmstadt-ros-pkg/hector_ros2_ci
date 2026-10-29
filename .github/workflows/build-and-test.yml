@@ -92,7 +92,10 @@ jobs:
            -----END PGP PUBLIC KEY BLOCK-----
           EOF
           mkdir -p /etc/ros/rosdep/sources.list.d
-          echo "yaml http://deb.teamhector.de/rosdep/hector.yaml" > /etc/ros/rosdep/sources.list.d/10-hector.list
+          # jazzy rules live at rosdep/hector.yaml, newer distros at rosdep/<distro>/hector.yaml
+          ROSDEP_DIR="${{ matrix.rosdistro }}/"
+          if [ "${{ matrix.rosdistro }}" = jazzy ]; then ROSDEP_DIR=""; fi
+          echo "yaml http://deb.teamhector.de/rosdep/${ROSDEP_DIR}hector.yaml" > /etc/ros/rosdep/sources.list.d/10-hector.list
           # Retry downloads so short outages of the build server don't fail CI
           echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/80-retries
           apt-get update
