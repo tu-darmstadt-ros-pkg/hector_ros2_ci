@@ -11,4 +11,11 @@ jobs:
   pre-commit:
     uses: ./.github/workflows/pre-commit.yml
   build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
     uses: ./.github/workflows/build-and-test.yml
+    with:
+      rosdistro: '["jazzy", "lyrical"]'
+      runner: ${{ matrix.runner }}
