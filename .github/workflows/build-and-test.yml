@@ -109,20 +109,14 @@ jobs:
           # Environment for later steps: ROS underlay, Hector packages (/opt/hector) on top
           cat > /etc/hector_ci_env.bash <<'EOF'
           source "/opt/ros/${ROS_DISTRO}/setup.bash"
-          HECTOR_PREFIX="/opt/hector/${ROS_DISTRO}"
-          if [ -d "$HECTOR_PREFIX" ]; then
-            export AMENT_PREFIX_PATH="$HECTOR_PREFIX:$AMENT_PREFIX_PATH"
-            export CMAKE_PREFIX_PATH="$HECTOR_PREFIX${CMAKE_PREFIX_PATH:+:$CMAKE_PREFIX_PATH}"
-            export PATH="$HECTOR_PREFIX/bin:$PATH"
-            export LD_LIBRARY_PATH="$HECTOR_PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-            for d in "$HECTOR_PREFIX"/lib/python3*/site-packages; do
-              if [ -d "$d" ]; then export PYTHONPATH="$d${PYTHONPATH:+:$PYTHONPATH}"; fi
-            done
-          fi
+          source "/opt/hector/${ROS_DISTRO}/setup.bash"
           EOF
 
       - name: Install dependencies
-        run: rosdep install -y --from-paths src --ignore-src --rosdistro "${{ matrix.rosdistro }}"
+        run: |
+          # Provides /opt/hector/<distro>/setup.bash
+          apt-get install -y "hector-${{ matrix.rosdistro }}-hector-workspace"
+          rosdep install -y --from-paths src --ignore-src --rosdistro "${{ matrix.rosdistro }}"
 
       - name: Build
         run: |
