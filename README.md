@@ -56,10 +56,10 @@ With a list, each distribution runs as its own job in parallel (a matrix); one f
 In a `ros:<rosdistro>-ros-base` container it
 
 1. adds the Hector apt repository and rosdep rules,
-2. runs `rosdep install` for all packages in the repository,
+2. installs `hector_workspace` and runs `rosdep install` for all packages in the repository,
 3. runs `colcon build`, `colcon test` and `colcon test-result`.
 
-Hector packages are installed to `/opt/hector/<rosdistro>` and take precedence over `/opt/ros/<rosdistro>`, just like in the Hector workspace.
+Hector packages are installed to `/opt/hector/<rosdistro>` and take precedence over `/opt/ros/<rosdistro>`, just like in the Hector workspace. Build and test source `/opt/hector/<rosdistro>/setup.bash`, so package environment hooks apply.
 
 ## Good to know
 
