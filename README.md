@@ -36,10 +36,11 @@ Make sure all dependencies are declared in your `package.xml` files.
 
 ### Options for `build-and-test.yml`
 
-| Input       | Default        | Description                                                                 |
-| ----------- | -------------- | --------------------------------------------------------------------------- |
-| `rosdistro` | `lyrical`      | ROS 2 distribution, or a JSON list of several (`'["jazzy", "lyrical"]'`).   |
-| `runner`    | `ubuntu-24.04` | Runner label, e.g. `ubuntu-24.04-arm` for arm64.                            |
+| Input        | Default          | Description                                                               |
+| ------------ | ---------------- | ------------------------------------------------------------------------- |
+| `rosdistro`  | `lyrical`        | ROS 2 distribution, or a JSON list of several (`'["jazzy", "lyrical"]'`). |
+| `runner`     | `ubuntu-24.04`   | Runner label, e.g. `ubuntu-24.04-arm` for arm64.                          |
+| `build-type` | `RelWithDebInfo` | `CMAKE_BUILD_TYPE` of the build, e.g. `Debug`.                            |
 
 With a list, each distribution runs as its own job in parallel (a matrix); one failing distribution does not cancel the others.
 

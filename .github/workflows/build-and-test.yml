@@ -13,6 +13,10 @@ on:
         description: GitHub runner label (e.g. ubuntu-24.04-arm for arm64).
         type: string
         default: ubuntu-24.04
+      build-type:
+        description: CMAKE_BUILD_TYPE of the build (e.g. Debug, Release).
+        type: string
+        default: RelWithDebInfo
 
 permissions:
   contents: read
@@ -121,7 +125,7 @@ jobs:
       - name: Build
         run: |
           source /etc/hector_ci_env.bash
-          colcon build --event-handlers console_direct+
+          colcon build --event-handlers console_direct+ --cmake-args "-DCMAKE_BUILD_TYPE=${{ inputs.build-type }}"
 
       - name: Test
         run: |
