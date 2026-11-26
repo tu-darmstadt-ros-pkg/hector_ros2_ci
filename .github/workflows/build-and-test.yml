@@ -53,6 +53,9 @@ jobs:
       image: ros:${{ matrix.rosdistro }}-ros-base
     env:
       DEBIAN_FRONTEND: noninteractive
+      # The compiler is installed anew each run, its content is what stays the same
+      CCACHE_COMPILERCHECK: content
+      CCACHE_MAXSIZE: 500M
     steps:
       - uses: actions/checkout@v7
         with:
@@ -135,12 +138,44 @@ jobs:
           # Provides /opt/hector/<distro>/setup.bash
           apt-get install -y "hector-${{ matrix.rosdistro }}-hector-workspace"
           rosdep install -y --from-paths src --ignore-src --rosdistro "${{ matrix.rosdistro }}"
+          apt-get install -y --no-install-recommends ccache
           if [ "${{ inputs.clang-tidy }}" = true ]; then apt-get install -y --no-install-recommends clang-tidy; fi
 
+      # One cache per configuration, so a sanitizer job does not evict the normal one
+      - name: Name the ccache
+        id: ccache
+        env:
+          CONFIGURATION: ${{ inputs.build-type }} ${{ inputs.cmake-args }}
+        # github.workspace is the path on the host, the container mounts it elsewhere
+        run: |
+          echo "CCACHE_DIR=$GITHUB_WORKSPACE/.ccache" >> "$GITHUB_ENV"
+          echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
+          echo "key=ccache-${{ matrix.rosdistro }}-${{ runner.arch }}-$(sha256sum <<< "$CONFIGURATION" | cut -c1-16)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the ccache
+        uses: actions/cache/restore@v6
+        with:
+          path: .ccache
+          key: ${{ steps.ccache.outputs.key }}-${{ github.sha }}
+          restore-keys: ${{ steps.ccache.outputs.key }}-
+
       - name: Build
+        id: build
         run: |
           source /etc/hector_ci_env.bash
-          colcon build --event-handlers console_direct+ --cmake-args "-DCMAKE_BUILD_TYPE=${{ inputs.build-type }}" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ${{ inputs.cmake-args }}
+          ccache --zero-stats
+          colcon build --event-handlers console_direct+ --cmake-args "-DCMAKE_BUILD_TYPE=${{ inputs.build-type }}" \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            ${{ inputs.cmake-args }}
+          ccache --show-stats
+
+      # Also when a later step fails, the build itself is worth keeping
+      - name: Save the ccache
+        if: always() && steps.build.outcome == 'success'
+        uses: actions/cache/save@v6
+        with:
+          path: .ccache
+          key: ${{ steps.ccache.outputs.key }}-${{ github.sha }}
 
       - name: clang-tidy
         if: inputs.clang-tidy
