@@ -41,6 +41,9 @@ Make sure all dependencies are declared in your `package.xml` files.
 | `rosdistro`  | `lyrical`        | ROS 2 distribution, or a JSON list of several (`'["jazzy", "lyrical"]'`). |
 | `runner`     | `ubuntu-24.04`   | Runner label, e.g. `ubuntu-24.04-arm` for arm64.                          |
 | `build-type` | `RelWithDebInfo` | `CMAKE_BUILD_TYPE` of the build, e.g. `Debug`.                            |
+| `cmake-args` |                  | Extra CMake arguments in shell syntax, quote values with spaces.          |
+| `ctest-args` |                  | Arguments for `ctest`, e.g. `-j$(nproc)` to run tests in parallel or `-L <label>` for a subset. |
+| `clang-tidy` | `false`          | Run `clang-tidy` on the repository's sources after the build. Any finding fails the job. |
 
 With a list, each distribution runs as its own job in parallel (a matrix); one failing distribution does not cancel the others.
 
@@ -52,13 +55,25 @@ With a list, each distribution runs as its own job in parallel (a matrix); one f
       runner: ubuntu-24.04-arm
 ```
 
+Call the workflow twice for a second configuration, e.g. a subset of the tests under AddressSanitizer next to the normal build. Both jobs run in parallel:
+
+```yaml
+  asan:
+    uses: tu-darmstadt-ros-pkg/hector_ros2_ci/.github/workflows/build-and-test.yml@v1
+    with:
+      cmake-args: '"-DCMAKE_CXX_FLAGS=-fsanitize=address -fno-omit-frame-pointer"'
+      ctest-args: -j$(nproc) -L concurrency
+```
+
+`clang-tidy` reads the `.clang-tidy` files of the repository, without one it runs its default checks. Tests running in parallel must not share a ROS domain, see `ament_add_ros_isolated_gtest` in `ament_cmake_ros`.
+
 ## What `build-and-test` does
 
 In a `ros:<rosdistro>-ros-base` container it
 
 1. adds the Hector apt repository and rosdep rules,
 2. installs `hector_workspace` and runs `rosdep install` for all packages in the repository,
-3. runs `colcon build`, `colcon test` and `colcon test-result`.
+3. runs `colcon build`, optionally `clang-tidy`, then `colcon test` and `colcon test-result`.
 
 Hector packages are installed to `/opt/hector/<rosdistro>` and take precedence over `/opt/ros/<rosdistro>`, just like in the Hector workspace. Build and test source `/opt/hector/<rosdistro>/setup.bash`, so package environment hooks apply.
 

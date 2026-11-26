@@ -17,6 +17,20 @@ on:
         description: CMAKE_BUILD_TYPE of the build (e.g. Debug, Release).
         type: string
         default: RelWithDebInfo
+      cmake-args:
+        description: >-
+          Extra CMake arguments in shell syntax, quote values with spaces
+          (e.g. '"-DCMAKE_CXX_FLAGS=-fsanitize=address -fno-omit-frame-pointer"').
+        type: string
+        default: ""
+      ctest-args:
+        description: Arguments for ctest in shell syntax (e.g. '-j$(nproc)' or '-L <label>').
+        type: string
+        default: ""
+      clang-tidy:
+        description: Run clang-tidy on the repository's sources after the build, with its .clang-tidy.
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -121,15 +135,27 @@ jobs:
           # Provides /opt/hector/<distro>/setup.bash
           apt-get install -y "hector-${{ matrix.rosdistro }}-hector-workspace"
           rosdep install -y --from-paths src --ignore-src --rosdistro "${{ matrix.rosdistro }}"
+          if [ "${{ inputs.clang-tidy }}" = true ]; then apt-get install -y --no-install-recommends clang-tidy; fi
 
       - name: Build
         run: |
           source /etc/hector_ci_env.bash
-          colcon build --event-handlers console_direct+ --cmake-args "-DCMAKE_BUILD_TYPE=${{ inputs.build-type }}"
+          colcon build --event-handlers console_direct+ --cmake-args "-DCMAKE_BUILD_TYPE=${{ inputs.build-type }}" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ${{ inputs.cmake-args }}
+
+      - name: clang-tidy
+        if: inputs.clang-tidy
+        run: |
+          # clang may pick a newer GCC without C++ headers, so use the one that built the workspace
+          GCC_DIR="$(dirname "$(g++ -print-libgcc-file-name)")"
+          # Every package of the repository, without generated sources in build/
+          for database in build/*/compile_commands.json; do
+            run-clang-tidy -quiet -warnings-as-errors='*' -extra-arg="--gcc-install-dir=$GCC_DIR" \
+              -p "$(dirname "$database")" "^$PWD/src/"
+          done
 
       - name: Test
         run: |
           source /etc/hector_ci_env.bash
           source install/setup.bash
-          colcon test --event-handlers console_direct+
+          colcon test --event-handlers console_direct+ --ctest-args ${{ inputs.ctest-args }}
           colcon test-result --verbose
