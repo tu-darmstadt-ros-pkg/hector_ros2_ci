@@ -19,3 +19,5 @@ jobs:
     with:
       rosdistro: '["jazzy", "lyrical"]'
       runner: ${{ matrix.runner }}
+      ctest-args: -j$(nproc)
+      clang-tidy: true
