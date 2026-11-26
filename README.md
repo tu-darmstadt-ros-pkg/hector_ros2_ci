@@ -75,6 +75,8 @@ In a `ros:<rosdistro>-ros-base` container it
 2. installs `hector_workspace` and runs `rosdep install` for all packages in the repository,
 3. runs `colcon build`, optionally `clang-tidy`, then `colcon test` and `colcon test-result`.
 
+Builds go through [ccache](https://ccache.dev). Its cache is kept per distribution, architecture and configuration (`build-type` and `cmake-args`), so a second push to a pull request compiles only what changed. Pull requests start from the cache of their base branch.
+
 Hector packages are installed to `/opt/hector/<rosdistro>` and take precedence over `/opt/ros/<rosdistro>`, just like in the Hector workspace. Build and test source `/opt/hector/<rosdistro>/setup.bash`, so package environment hooks apply.
 
 ## Good to know
